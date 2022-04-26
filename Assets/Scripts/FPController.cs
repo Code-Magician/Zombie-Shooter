@@ -17,6 +17,12 @@ public class FPController : MonoBehaviour
     [SerializeField] AudioSource[] footSteps;
     [SerializeField] AudioSource jump;
     [SerializeField] AudioSource land;
+    [SerializeField] AudioSource ammokitAudio;
+    [SerializeField] AudioSource medkitAudio;
+    [SerializeField] AudioSource outOfAmmo;
+    [SerializeField] AudioSource dealth;
+    [SerializeField] AudioSource reload;
+
 
 
     Rigidbody rb;
@@ -24,7 +30,16 @@ public class FPController : MonoBehaviour
     Quaternion camRotation, fpsRotation;
     bool cursorIsLocked = true;
     float x, z;
+    bool isDead = false;
 
+
+    // Inventory
+    int ammo = 50;
+    int maxAmmo = 50;
+    int ammoClip = 5;
+    int maxAmmoClip = 5;
+    int health = 100;
+    int maxHealth = 100;
 
 
     private void Awake()
@@ -40,8 +55,11 @@ public class FPController : MonoBehaviour
 
         camRotation = fpsCamera.transform.localRotation;
         fpsRotation = this.transform.localRotation;
-    }
 
+        health = maxHealth;
+        ammoClip = maxAmmoClip;
+        ammo = maxAmmo;
+    }
 
 
     // Interval between 2 Fixed Update Functions is not constant...
@@ -63,11 +81,35 @@ public class FPController : MonoBehaviour
 
         // Fire 
         if (Input.GetKeyDown(KeyCode.Mouse0))
-            anim.SetTrigger("Fire");
+        {
+            if (ammoClip > 0)
+            {
+                anim.SetTrigger("Fire");
+                if (anim.GetBool("Weapon"))
+                    ammoClip--;
+            }
+            else if (anim.GetBool("Weapon"))
+            {
+                outOfAmmo.Play();
+            }
+            Debug.Log("AmmoClip: " + ammoClip);
+            Debug.Log("Ammo: " + ammo);
+        }
 
         // Reload Gun
-        if (Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R) && anim.GetBool("Weapon"))
+        {
             anim.SetTrigger("Reload");
+
+            // Reloading ammoclip
+            int ammoNeeded = maxAmmoClip - ammoClip;
+            int ammoAvailable = Mathf.Min(ammoNeeded, ammo);
+            ammoClip += ammoAvailable;
+            ammo -= ammoAvailable;
+            reload.Play();
+            Debug.Log("Ammo Clip: " + ammoClip);
+            Debug.Log("Ammo: " + ammo);
+        }
 
         // Walking with Weapon
         if (x != 0 || z != 0)
@@ -83,6 +125,13 @@ public class FPController : MonoBehaviour
             anim.SetBool("WalkWithWeapon", false);
             CancelInvoke("RandomFootsteps");
         }
+
+        // // Check if dead
+        // if (health <= 0 && !isDead)
+        // {
+        //     isDead = true;
+        //     dealth.Play();
+        // }
     }
 
 
@@ -126,12 +175,54 @@ public class FPController : MonoBehaviour
 
     private void OnCollisionEnter(Collision other)
     {
+        if (other.gameObject.tag == "Ammo" && ammo < maxAmmo)
+        {
+            ammo = Mathf.Clamp(ammo + 10, 0, maxAmmo);
+            ammokitAudio.Play();
+            Debug.Log("Ammo: " + ammo);
+            Destroy(other.gameObject);
+        }
+        else if (other.gameObject.tag == "Med" && health < maxHealth)
+        {
+            health = Mathf.Clamp(health + 25, 0, maxHealth);
+            medkitAudio.Play();
+            Debug.Log("Health: " + health);
+            Destroy(other.gameObject);
+        }
+        else if (other.gameObject.tag == "Danger")
+        {
+            InvokeRepeating("Danger", 0.5f, 1f);
+            dealth.Play();
+        }
+
         if (IsOnGround())
         {
             land.Play();
             if (anim.GetBool("WalkWithWeapon"))
                 InvokeRepeating("RandomFootsteps", 0, 0.4f);
         }
+    }
+
+    private void OnCollisionExit(Collision other)
+    {
+        if (other.gameObject.tag == "Danger")
+        {
+            CancelInvoke("Danger");
+        }
+    }
+
+
+
+    public void Danger()
+    {
+        health = Mathf.Clamp(health - 5, 0, maxHealth);
+        // Check if dead
+        if (health <= 0 && !isDead)
+        {
+            isDead = true;
+            dealth.Play();
+        }
+        Debug.Log("Health: " + health);
     }
 
 
