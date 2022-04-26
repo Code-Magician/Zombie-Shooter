@@ -6,19 +6,24 @@ public class FPController : MonoBehaviour
 {
     [Header("Properties")]
     [SerializeField] float movementSpeed = 10f;
-    [SerializeField] float boostSpeed = 20f;
+    [SerializeField] float sprintSpeed = 20f;
     [SerializeField] float jumpForce = 300f;
     [Range(0, 10)][SerializeField] float sensitivity = 1f;
 
 
     [Header("References")]
     [SerializeField] Camera fpsCamera;
+    [SerializeField] Animator anim;
+    [SerializeField] AudioSource[] footSteps;
+    [SerializeField] AudioSource jump;
+    [SerializeField] AudioSource land;
 
 
     Rigidbody rb;
     CapsuleCollider fpsCollider;
     Quaternion camRotation, fpsRotation;
     bool cursorIsLocked = true;
+    float x, z;
 
 
 
@@ -42,7 +47,42 @@ public class FPController : MonoBehaviour
     // Interval between 2 Fixed Update Functions is not constant...
     void Update()
     {
+        // FPC Jump
+        if (Input.GetKeyDown(KeyCode.Space) && IsOnGround())
+        {
+            rb.AddForce(0, jumpForce, 0);
+            jump.Play();
+            if (anim.GetBool("WalkWithWeapon"))
+                CancelInvoke("RandomFootsteps");
+        }
 
+
+        // Gets Weapon
+        if (Input.GetKeyDown(KeyCode.F))
+            anim.SetBool("Weapon", !anim.GetBool("Weapon"));
+
+        // Fire 
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+            anim.SetTrigger("Fire");
+
+        // Reload Gun
+        if (Input.GetKeyDown(KeyCode.R))
+            anim.SetTrigger("Reload");
+
+        // Walking with Weapon
+        if (x != 0 || z != 0)
+        {
+            if (!anim.GetBool("WalkWithWeapon"))
+            {
+                anim.SetBool("WalkWithWeapon", true);
+                InvokeRepeating("RandomFootsteps", 0, 0.4f);
+            }
+        }
+        else if (anim.GetBool("WalkWithWeapon"))
+        {
+            anim.SetBool("WalkWithWeapon", false);
+            CancelInvoke("RandomFootsteps");
+        }
     }
 
 
@@ -51,19 +91,16 @@ public class FPController : MonoBehaviour
     private void FixedUpdate()
     {
         // Moving FPC
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
+        x = Input.GetAxis("Horizontal");
+        z = Input.GetAxis("Vertical");
 
         if (Input.GetKey(KeyCode.LeftShift))
-            transform.Translate(x * boostSpeed * Time.deltaTime, 0, z * boostSpeed * Time.deltaTime, Space.Self);
-        else
-            transform.Translate(x * movementSpeed * Time.deltaTime, 0, z * movementSpeed * Time.deltaTime, Space.Self);
-
-
-        // FPC Jump
-        if (Input.GetKeyDown(KeyCode.Space) && IsOnGround())
         {
-            rb.AddForce(0, jumpForce, 0);
+            transform.Translate(x * sprintSpeed * Time.deltaTime, 0, z * sprintSpeed * Time.deltaTime, Space.Self);
+        }
+        else
+        {
+            transform.Translate(x * movementSpeed * Time.deltaTime, 0, z * movementSpeed * Time.deltaTime, Space.Self);
         }
 
 
@@ -83,6 +120,18 @@ public class FPController : MonoBehaviour
 
         // Toggle Cursor
         ToggleCursor();
+    }
+
+
+
+    private void OnCollisionEnter(Collision other)
+    {
+        if (IsOnGround())
+        {
+            land.Play();
+            if (anim.GetBool("WalkWithWeapon"))
+                InvokeRepeating("RandomFootsteps", 0, 0.4f);
+        }
     }
 
 
@@ -144,5 +193,19 @@ public class FPController : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
+    }
+
+
+
+    // Play Random Walking Sound
+    public void RandomFootsteps()
+    {
+        int idx = Random.Range(1, footSteps.Length);
+        AudioSource temp = new AudioSource();
+
+        temp = footSteps[idx];
+        temp.Play();
+        footSteps[idx] = footSteps[0];
+        footSteps[0] = temp;
     }
 }
