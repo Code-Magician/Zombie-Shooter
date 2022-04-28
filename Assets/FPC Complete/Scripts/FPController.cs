@@ -14,6 +14,7 @@ public class FPController : MonoBehaviour
     [Header("References")]
     [SerializeField] Camera fpsCamera;
     [SerializeField] Animator anim;
+    [SerializeField] Transform BulletDirection;
     [SerializeField] AudioSource[] footSteps;
     [SerializeField] AudioSource jump;
     [SerializeField] AudioSource land;
@@ -96,6 +97,7 @@ public class FPController : MonoBehaviour
             if (ammoClip > 0)
             {
                 anim.SetTrigger("Fire");
+                Shoot();
                 if (anim.GetBool("Weapon"))
                     ammoClip--;
             }
@@ -311,5 +313,19 @@ public class FPController : MonoBehaviour
         footSteps[idx] = footSteps[0];
         footSteps[0] = temp;
         playingWalking = true;
+    }
+
+
+    private void Shoot()
+    {
+        RaycastHit hitInfo;
+        if (Physics.Raycast(BulletDirection.position, BulletDirection.forward, out hitInfo, 200))
+        {
+            GameObject shotObj = hitInfo.collider.gameObject;
+            if (shotObj.tag == "Zombie")
+            {
+                shotObj.GetComponent<ZombieController>().KillSelf();
+            }
+        }
     }
 }

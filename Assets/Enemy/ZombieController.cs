@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 public class ZombieController : MonoBehaviour
 {
-    enum STATE
+    public enum STATE
     {
         IDLE,
         WANDER,
@@ -13,7 +13,7 @@ public class ZombieController : MonoBehaviour
         ATTTACK,
         DEATH
     }
-    STATE state = STATE.IDLE;
+    public STATE state = STATE.IDLE;
 
 
     [Header("References")]
@@ -23,7 +23,7 @@ public class ZombieController : MonoBehaviour
     [SerializeField] float approachDistance = 20;
     [SerializeField] float forgetPlayerDistance = 30f;
     [SerializeField] float attackDistace = 2f;
-    [SerializeField] GameObject ragDoll;
+    public GameObject ragDoll;
 
 
     Animator anim;
@@ -38,21 +38,20 @@ public class ZombieController : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Mouse2))
-        {
-            if (Random.Range(0, 100) < 50)
-            {
-                GameObject temp = Instantiate(ragDoll, transform.position, transform.rotation);
-                temp.transform.Find("Hips").GetComponent<Rigidbody>().AddForce(Camera.main.gameObject.transform.forward * 500, ForceMode.Impulse);
-                Destroy(gameObject);
-                return;
-            }
-            else
-            {
-                state = STATE.DEATH;
-            }
-
-        }
+        // if (Input.GetKeyDown(KeyCode.Mouse2))
+        // {
+        //     if (Random.Range(0, 100) < 50)
+        //     {
+        //         GameObject temp = Instantiate(ragDoll, transform.position, transform.rotation);
+        //         temp.transform.Find("Hips").GetComponent<Rigidbody>().AddForce(Camera.main.gameObject.transform.forward * 500, ForceMode.Impulse);
+        //         Destroy(gameObject);
+        //         return;
+        //     }
+        //     else
+        //     {
+        //         state = STATE.DEATH;
+        //     }
+        // }
 
         if (target == null)
         {
@@ -166,5 +165,21 @@ public class ZombieController : MonoBehaviour
     bool InAttackRange()
     {
         return (agent.remainingDistance <= agent.stoppingDistance);
+    }
+
+
+    public void KillSelf()
+    {
+        if (Random.Range(0, 100) < 50)
+        {
+            GameObject temp = Instantiate(ragDoll, transform.position, transform.rotation);
+            temp.transform.Find("Hips").GetComponent<Rigidbody>().AddForce(Camera.main.gameObject.transform.forward * 500, ForceMode.Impulse);
+            Destroy(gameObject);
+            return;
+        }
+        else
+        {
+            state = STATE.DEATH;
+        }
     }
 }
