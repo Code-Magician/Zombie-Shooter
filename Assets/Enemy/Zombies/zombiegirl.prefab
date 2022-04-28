@@ -2180,6 +2180,7 @@ GameObject:
   - component: {fileID: 5643912976069227624}
   - component: {fileID: 5542127211463571573}
   - component: {fileID: 596094358}
+  - component: {fileID: 643708581}
   m_Layer: 0
   m_Name: zombiegirl
   m_TagString: Untagged
@@ -2236,6 +2237,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b5feca5cdf0d0543a2bcb2d9243ffa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  target: {fileID: 0}
+  walkingSpeed: 1
+  runningSpeed: 5.5
+  approachDistance: 20
+  forgetPlayerDistance: 30
+  attackDistace: 5
+  ragDoll: {fileID: 8546917930699447717, guid: b822dcf4fc1cfda42823d5bd20ba77ad, type: 3}
+--- !u!195 &643708581
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8649283112028866171}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 1
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 2
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
 --- !u!1 &8889811393416137658
 GameObject:
   m_ObjectHideFlags: 0

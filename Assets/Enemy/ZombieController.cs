@@ -5,12 +5,30 @@ using UnityEngine.AI;
 
 public class ZombieController : MonoBehaviour
 {
+    enum STATE
+    {
+        IDLE,
+        WANDER,
+        CHASE,
+        ATTTACK,
+        DEATH
+    }
+    STATE state = STATE.IDLE;
+
+
     [Header("References")]
-    [SerializeField] Transform target;
+    public Transform target;
+    [SerializeField] float walkingSpeed = 1f;
+    [SerializeField] float runningSpeed = 5f;
     [SerializeField] float approachDistance = 20;
+    [SerializeField] float forgetPlayerDistance = 30f;
+    [SerializeField] float attackDistace = 2f;
+    [SerializeField] GameObject ragDoll;
+
 
     Animator anim;
     NavMeshAgent agent;
+
 
     private void Start()
     {
@@ -20,50 +38,133 @@ public class ZombieController : MonoBehaviour
 
     private void Update()
     {
-        if (Vector3.Distance(target.position, this.gameObject.transform.position) <= approachDistance)
+        if (Input.GetKeyDown(KeyCode.Mouse2))
         {
-            agent.SetDestination(target.position);
-            if (agent.remainingDistance > agent.stoppingDistance)
+            if (Random.Range(0, 100) < 50)
             {
-                if (!anim.GetBool("Walk"))
-                {
-                    anim.SetBool("Walk", true);
-                    anim.SetBool("Attack", false);
-                }
+                GameObject temp = Instantiate(ragDoll, transform.position, transform.rotation);
+                temp.transform.Find("Hips").GetComponent<Rigidbody>().AddForce(Camera.main.gameObject.transform.forward * 500, ForceMode.Impulse);
+                Destroy(gameObject);
+                return;
             }
             else
             {
-                if (anim.GetBool("Walk"))
+                state = STATE.DEATH;
+            }
+
+        }
+
+        if (target == null)
+        {
+            target = GameObject.FindGameObjectWithTag("Player").gameObject.transform;
+            return;
+        }
+
+        switch (state)
+        {
+            case STATE.IDLE:
+                if (CanSeePlayer())
+                    state = STATE.CHASE;
+                else if (Random.Range(0, 5000) < 10)
+                    state = STATE.WANDER;
+                break;
+
+            case STATE.WANDER:
+                // Move zombie to random target...
+                if (!agent.hasPath)
                 {
-                    anim.SetBool("Walk", false);
+                    float x = transform.position.x + Random.Range(-5f, 5f);
+                    float z = transform.position.z + Random.Range(-5f, 5f);
+                    float y = Terrain.activeTerrain.SampleHeight(new Vector3(x, 0, z));
+                    Vector3 tempTarget = new Vector3(x, y, z);
+
+                    agent.SetDestination(tempTarget);
+                    agent.stoppingDistance = 0;
+                    agent.speed = walkingSpeed;
+
+                    ToggleAnimationTriggers();
+                    anim.SetBool("Walk", true);
+                }
+                if (CanSeePlayer())
+                    state = STATE.CHASE;
+                else if (Random.Range(0, 5000) < 10)
+                {
+                    state = STATE.IDLE;
+                    ToggleAnimationTriggers();
+                    agent.ResetPath();
+                }
+                break;
+
+            case STATE.CHASE:
+                agent.SetDestination(target.position);
+                agent.stoppingDistance = attackDistace;
+                agent.speed = runningSpeed;
+
+                ToggleAnimationTriggers();
+                anim.SetBool("Run", true);
+
+                if (InAttackRange() && !agent.pathPending)
+                {
+                    state = STATE.ATTTACK;
+                }
+                if (ForgetPlayer())
+                {
+                    state = STATE.WANDER;
+                    agent.ResetPath();
+                }
+                break;
+
+            case STATE.ATTTACK:
+                if (!anim.GetBool("Attack"))
+                {
+                    ToggleAnimationTriggers();
                     anim.SetBool("Attack", true);
                 }
-            }
+                this.transform.LookAt(target.position);
+
+                if (OutOfAttackRange())
+                    state = STATE.CHASE;
+                break;
+
+            case STATE.DEATH:
+                ToggleAnimationTriggers();
+                anim.SetBool("Death", true);
+                break;
         }
-        else
-        {
-            anim.SetBool("Walk", false);
-            anim.SetBool("Attack", false);
-        }
+    }
 
-        // if (Input.GetKey(KeyCode.A))
-        //     anim.SetBool("Walk", true);
-        // else
-        //     anim.SetBool("Walk", false);
+    private void ToggleAnimationTriggers()
+    {
+        anim.SetBool("Walk", false);
+        anim.SetBool("Run", false);
+        anim.SetBool("Attack", false);
+        anim.SetBool("Death", false);
+    }
 
-        // if (Input.GetKey(KeyCode.S))
-        //     anim.SetBool("Run", true);
-        // else
-        //     anim.SetBool("Run", false);
 
-        // if (Input.GetKey(KeyCode.D))
-        //     anim.SetBool("Attack", true);
-        // else
-        //     anim.SetBool("Attack", false);
+    bool CanSeePlayer()
+    {
+        if (Vector3.Distance(this.transform.position, target.position) <= approachDistance)
+            return true;
 
-        // if (Input.GetKey(KeyCode.F))
-        //     anim.SetBool("Death", true);
-        // else
-        //     anim.SetBool("Death", false);
+        return false;
+    }
+
+    bool ForgetPlayer()
+    {
+        if (Vector3.Distance(this.transform.position, target.position) > forgetPlayerDistance)
+            return true;
+
+        return false;
+    }
+
+    bool OutOfAttackRange()
+    {
+        return Vector3.Distance(target.position, this.transform.position) > agent.stoppingDistance + 2f;
+    }
+
+    bool InAttackRange()
+    {
+        return (agent.remainingDistance <= agent.stoppingDistance);
     }
 }
