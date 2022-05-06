@@ -12,4 +12,8 @@ public class SoundController : MonoBehaviour
         fireAudio.Play();
     }
 
+    public void FireAnimationFinished()
+    {
+        GameStats.canShoot = true;
+    }
 }

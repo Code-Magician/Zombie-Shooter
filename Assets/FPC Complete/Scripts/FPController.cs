@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class FPController : MonoBehaviour
 {
@@ -14,7 +15,8 @@ public class FPController : MonoBehaviour
     [Header("References")]
     [SerializeField] Camera fpsCamera;
     [SerializeField] Animator anim;
-    [SerializeField] Transform BulletDirection;
+    [SerializeField] GameObject aim;
+    [SerializeField] GameObject fullBodyModel;
     [SerializeField] AudioSource[] footSteps;
     [SerializeField] AudioSource jump;
     [SerializeField] AudioSource land;
@@ -23,7 +25,14 @@ public class FPController : MonoBehaviour
     [SerializeField] AudioSource outOfAmmo;
     [SerializeField] AudioSource dealth;
     [SerializeField] AudioSource reload;
+    [SerializeField] GameObject goal;
 
+
+    [Header("UI References")]
+    [SerializeField] Slider healthBar;
+    [SerializeField] Text totalBulletsText;
+    [SerializeField] Text bulletsInGunText;
+    [SerializeField] Slider compass;
 
 
     Rigidbody rb;
@@ -39,15 +48,15 @@ public class FPController : MonoBehaviour
     // Inventory
     int ammo = 50;
     int maxAmmo = 50;
-    int ammoClip = 5;
-    int maxAmmoClip = 5;
+    int ammoClip = 10;
+    int maxAmmoClip = 10;
     int health = 100;
     int maxHealth = 100;
 
 
     private void Awake()
     {
-        ChangeCursorState();
+        LockCursor(true);
     }
 
 
@@ -62,12 +71,18 @@ public class FPController : MonoBehaviour
         health = maxHealth;
         ammoClip = maxAmmoClip;
         ammo = maxAmmo;
+
+        RefreshHealthBar();
+        RefreshBulletsInGun();
+        RefreshTotalBulletText();
     }
 
 
     // Interval between 2 Fixed Update Functions is not constant...
     void Update()
     {
+        SetCompass();
+
         // FPC Jump
         bool grounded = IsOnGround();
         if (Input.GetKeyDown(KeyCode.Space) && grounded)
@@ -91,22 +106,25 @@ public class FPController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F))
             anim.SetBool("Weapon", !anim.GetBool("Weapon"));
 
+        // Enable Aim
+        if (anim.GetBool("Weapon"))
+            aim.SetActive(true);
+        else
+            aim.SetActive(false);
+
         // Fire 
-        if (Input.GetKeyDown(KeyCode.Mouse0))
+        if (Input.GetKeyDown(KeyCode.Mouse0) && anim.GetBool("Weapon") && GameStats.canShoot)
         {
             if (ammoClip > 0)
             {
-                anim.SetTrigger("Fire");
                 Shoot();
-                if (anim.GetBool("Weapon"))
-                    ammoClip--;
             }
-            else if (anim.GetBool("Weapon"))
+            else
             {
                 outOfAmmo.Play();
             }
-            Debug.Log("AmmoClip: " + ammoClip);
-            Debug.Log("Ammo: " + ammo);
+            // Debug.Log("AmmoClip: " + ammoClip);
+            // Debug.Log("Ammo: " + ammo);
         }
 
         // Reload Gun
@@ -120,8 +138,12 @@ public class FPController : MonoBehaviour
             ammoClip += ammoAvailable;
             ammo -= ammoAvailable;
             reload.Play();
-            Debug.Log("Ammo Clip: " + ammoClip);
-            Debug.Log("Ammo: " + ammo);
+
+            RefreshTotalBulletText();
+            RefreshBulletsInGun();
+
+            // Debug.Log("Ammo Clip: " + ammoClip);
+            // Debug.Log("Ammo: " + ammo);
         }
 
         // Walking with Weapon
@@ -194,20 +216,26 @@ public class FPController : MonoBehaviour
         {
             ammo = Mathf.Clamp(ammo + 10, 0, maxAmmo);
             ammokitAudio.Play();
-            Debug.Log("Ammo: " + ammo);
+            // Debug.Log("Ammo: " + ammo);
             Destroy(other.gameObject);
+
+            RefreshTotalBulletText();
         }
         else if (other.gameObject.tag == "Med" && health < maxHealth)
         {
             health = Mathf.Clamp(health + 25, 0, maxHealth);
+            RefreshHealthBar();
+
             medkitAudio.Play();
-            Debug.Log("Health: " + health);
+            // Debug.Log("Health: " + health);
             Destroy(other.gameObject);
         }
         else if (other.gameObject.tag == "Danger")
         {
             InvokeRepeating("Danger", 0.5f, 1f);
             dealth.Play();
+
+            RefreshHealthBar();
         }
 
         if (IsOnGround())
@@ -226,6 +254,15 @@ public class FPController : MonoBehaviour
     }
 
 
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.tag == "Finishline")
+        {
+            GameoverWith("Dance");
+        }
+    }
+
+
 
     public void Danger()
     {
@@ -236,7 +273,7 @@ public class FPController : MonoBehaviour
             isDead = true;
             dealth.Play();
         }
-        Debug.Log("Health: " + health);
+        // Debug.Log("Health: " + health);
     }
 
 
@@ -277,17 +314,16 @@ public class FPController : MonoBehaviour
     {
         if (Input.GetKeyUp(KeyCode.Escape) && cursorIsLocked)
         {
-            cursorIsLocked = false;
-            ChangeCursorState();
+            LockCursor(false);
         }
         else if (Input.GetKeyUp(KeyCode.Mouse0) && !cursorIsLocked)
         {
-            cursorIsLocked = true;
-            ChangeCursorState();
+            LockCursor(true);
         }
     }
-    public void ChangeCursorState()
+    public void LockCursor(bool action)
     {
+        cursorIsLocked = action;
         if (cursorIsLocked)
         {
             Cursor.lockState = CursorLockMode.Locked;
@@ -318,8 +354,15 @@ public class FPController : MonoBehaviour
 
     private void Shoot()
     {
+        ammoClip--;
+        RefreshBulletsInGun();
+
+        anim.SetTrigger("Fire");
+        GameStats.canShoot = false;
+
+
         RaycastHit hitInfo;
-        if (Physics.Raycast(BulletDirection.position, BulletDirection.forward, out hitInfo, 200))
+        if (Physics.Raycast(fpsCamera.gameObject.transform.position, fpsCamera.gameObject.transform.forward, out hitInfo, 200))
         {
             GameObject shotObj = hitInfo.collider.gameObject;
             if (shotObj.tag == "Zombie")
@@ -327,5 +370,58 @@ public class FPController : MonoBehaviour
                 shotObj.GetComponent<ZombieController>().KillSelf();
             }
         }
+    }
+
+
+    public void TakeDamage(float damageAmount)
+    {
+        health = (int)Mathf.Clamp((float)health - damageAmount, 0, maxHealth);
+        RefreshHealthBar();
+
+        if (health <= 0)
+        {
+            GameoverWith("Death");
+        }
+        // Debug.Log("Health: " + health);
+    }
+
+
+    private void GameoverWith(string action)
+    {
+        Vector3 pos = new Vector3(transform.position.x, Terrain.activeTerrain.SampleHeight(transform.position), transform.position.z);
+        GameObject fullBody = Instantiate(fullBodyModel, pos, transform.rotation);
+        fullBody.GetComponent<Animator>().SetTrigger(action);
+
+        LockCursor(false);
+
+        GameStats.gameOver = true;
+
+        aim.SetActive(false);
+
+        Destroy(gameObject);
+    }
+
+
+    private void RefreshHealthBar()
+    {
+        healthBar.value = health;
+    }
+
+    private void RefreshTotalBulletText()
+    {
+        totalBulletsText.text = ammo.ToString("00");
+    }
+
+    private void RefreshBulletsInGun()
+    {
+        bulletsInGunText.text = ammoClip.ToString("00");
+    }
+
+
+    private void SetCompass()
+    {
+        Vector3 toGoalVector = goal.transform.position - transform.position;
+        float deg = Mathf.Clamp(Vector3.SignedAngle(transform.forward, toGoalVector, Vector3.up), -90, 90);
+        compass.value = deg;
     }
 }

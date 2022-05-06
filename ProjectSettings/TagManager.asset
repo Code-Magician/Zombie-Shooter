@@ -8,6 +8,8 @@ TagManager:
   - Med
   - Zombie
   - Danger
+  - Ragdoll
+  - Finishline
   layers:
   - Default
   - TransparentFX

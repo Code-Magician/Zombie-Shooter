@@ -30363,8 +30363,15 @@ AnimationClip:
   m_HasGenericRootTransform: 0
   m_HasMotionFloatCurves: 0
   m_Events:
-  - time: 0.06666667
+  - time: 0
     functionName: Fire
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 0
+    messageOptions: 0
+  - time: 1.3666667
+    functionName: FireAnimationFinished
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

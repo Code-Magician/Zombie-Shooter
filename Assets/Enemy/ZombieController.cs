@@ -18,6 +18,7 @@ public class ZombieController : MonoBehaviour
 
     [Header("References")]
     public Transform target;
+    [SerializeField] float damageAmount = 5f;
     [SerializeField] float walkingSpeed = 1f;
     [SerializeField] float runningSpeed = 5f;
     [SerializeField] float approachDistance = 20;
@@ -25,9 +26,13 @@ public class ZombieController : MonoBehaviour
     [SerializeField] float attackDistace = 2f;
     public GameObject ragDoll;
 
+    [SerializeField] AudioSource AttackAudioSource;
+    [SerializeField] AudioClip[] AttackClips;
+
 
     Animator anim;
     NavMeshAgent agent;
+    bool isAlive = true;
 
 
     private void Start()
@@ -53,7 +58,7 @@ public class ZombieController : MonoBehaviour
         //     }
         // }
 
-        if (target == null)
+        if (!GameStats.gameOver && target == null)
         {
             target = GameObject.FindGameObjectWithTag("Player").gameObject.transform;
             return;
@@ -62,7 +67,7 @@ public class ZombieController : MonoBehaviour
         switch (state)
         {
             case STATE.IDLE:
-                if (CanSeePlayer())
+                if (!GameStats.gameOver && CanSeePlayer())
                     state = STATE.CHASE;
                 else if (Random.Range(0, 5000) < 10)
                     state = STATE.WANDER;
@@ -84,7 +89,8 @@ public class ZombieController : MonoBehaviour
                     ToggleAnimationTriggers();
                     anim.SetBool("Walk", true);
                 }
-                if (CanSeePlayer())
+
+                if (!GameStats.gameOver && CanSeePlayer())
                     state = STATE.CHASE;
                 else if (Random.Range(0, 5000) < 10)
                 {
@@ -95,39 +101,64 @@ public class ZombieController : MonoBehaviour
                 break;
 
             case STATE.CHASE:
-                agent.SetDestination(target.position);
-                agent.stoppingDistance = attackDistace;
-                agent.speed = runningSpeed;
-
-                ToggleAnimationTriggers();
-                anim.SetBool("Run", true);
-
-                if (InAttackRange() && !agent.pathPending)
+                if (!GameStats.gameOver)
                 {
-                    state = STATE.ATTTACK;
+                    agent.SetDestination(target.position);
+                    agent.stoppingDistance = attackDistace;
+                    agent.speed = runningSpeed;
+
+                    ToggleAnimationTriggers();
+                    anim.SetBool("Run", true);
+
+                    if (InAttackRange() && !agent.pathPending)
+                    {
+                        state = STATE.ATTTACK;
+                    }
+                    if (ForgetPlayer())
+                    {
+                        state = STATE.WANDER;
+                        agent.ResetPath();
+                    }
                 }
-                if (ForgetPlayer())
+                else
                 {
-                    state = STATE.WANDER;
-                    agent.ResetPath();
+                    GameOver();
                 }
                 break;
 
             case STATE.ATTTACK:
-                if (!anim.GetBool("Attack"))
+                if (!GameStats.gameOver)
                 {
-                    ToggleAnimationTriggers();
-                    anim.SetBool("Attack", true);
-                }
-                this.transform.LookAt(target.position);
+                    if (!anim.GetBool("Attack"))
+                    {
+                        ToggleAnimationTriggers();
+                        anim.SetBool("Attack", true);
+                    }
 
-                if (OutOfAttackRange())
-                    state = STATE.CHASE;
+                    Vector3 lookAtPos = new Vector3(target.transform.position.x, transform.position.y, target.transform.position.z);
+                    this.transform.LookAt(lookAtPos);
+
+                    if (OutOfAttackRange())
+                        state = STATE.CHASE;
+                }
+                else
+                {
+                    GameOver();
+                }
                 break;
 
             case STATE.DEATH:
+                Destroy(agent);
                 ToggleAnimationTriggers();
                 anim.SetBool("Death", true);
+
+                if (isAlive)
+                {
+                    Sink sink = GetComponent<Sink>();
+                    if (sink != null)
+                        sink.StartSink();
+                }
+                isAlive = false;
                 break;
         }
     }
@@ -170,10 +201,10 @@ public class ZombieController : MonoBehaviour
 
     public void KillSelf()
     {
-        if (Random.Range(0, 100) < 50)
+        if (CanSeePlayer())
         {
             GameObject temp = Instantiate(ragDoll, transform.position, transform.rotation);
-            temp.transform.Find("Hips").GetComponent<Rigidbody>().AddForce(Camera.main.gameObject.transform.forward * 500, ForceMode.Impulse);
+            temp.transform.Find("Hips").GetComponent<Rigidbody>().AddForce(Camera.main.gameObject.transform.forward * 100, ForceMode.Impulse);
             Destroy(gameObject);
             return;
         }
@@ -181,5 +212,42 @@ public class ZombieController : MonoBehaviour
         {
             state = STATE.DEATH;
         }
+    }
+
+
+    private void DamagePlayer()
+    {
+        if (target != null)
+        {
+            target.GetComponent<FPController>().TakeDamage(damageAmount);
+            RandomAttackSound();
+        }
+        else
+        {
+            Invoke("GameOver", 5f);
+        }
+    }
+
+
+    private void GameOver()
+    {
+        state = STATE.WANDER;
+        agent.ResetPath();
+    }
+
+
+    public void RandomAttackSound()
+    {
+        int idx = Random.Range(1, AttackClips.Length);
+        AudioClip clip = AttackClips[idx];
+
+        AttackAudioSource.Stop();
+        AttackAudioSource.clip = clip;
+        AttackAudioSource.Play();
+
+
+        AudioClip temp = clip;
+        AttackClips[idx] = AttackClips[0];
+        AttackClips[0] = temp;
     }
 }
