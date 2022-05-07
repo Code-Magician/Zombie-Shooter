@@ -28,6 +28,9 @@ public class ZombieController : MonoBehaviour
 
     [SerializeField] AudioSource AttackAudioSource;
     [SerializeField] AudioClip[] AttackClips;
+    [SerializeField] AudioSource zombieSoundAudioSource;
+    [SerializeField] float minWait;
+    [SerializeField] float maxWait;
 
 
     Animator anim;
@@ -39,6 +42,7 @@ public class ZombieController : MonoBehaviour
     {
         anim = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
+        InvokeRepeating("PlayZombieSound", 0, Random.Range(minWait, maxWait));
     }
 
     private void Update()
@@ -158,6 +162,12 @@ public class ZombieController : MonoBehaviour
                     if (sink != null)
                         sink.StartSink();
                 }
+
+                AudioSource[] audioS = gameObject.GetComponents<AudioSource>();
+                foreach (AudioSource x in audioS)
+                    x.volume = 0;
+
+
                 isAlive = false;
                 break;
         }
@@ -249,5 +259,11 @@ public class ZombieController : MonoBehaviour
         AudioClip temp = clip;
         AttackClips[idx] = AttackClips[0];
         AttackClips[0] = temp;
+    }
+
+
+    public void PlayZombieSound()
+    {
+        zombieSoundAudioSource.Play();
     }
 }

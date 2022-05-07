@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 
 public class FPController : MonoBehaviour
 {
@@ -26,6 +28,7 @@ public class FPController : MonoBehaviour
     [SerializeField] AudioSource dealth;
     [SerializeField] AudioSource reload;
     [SerializeField] GameObject goal;
+    [SerializeField] GameObject bloodParticles;
 
 
     [Header("UI References")]
@@ -33,6 +36,8 @@ public class FPController : MonoBehaviour
     [SerializeField] Text totalBulletsText;
     [SerializeField] Text bulletsInGunText;
     [SerializeField] Slider compass;
+    [SerializeField] GameObject bloodSplaterPrefab;
+    [SerializeField] GameObject canvas;
 
 
     Rigidbody rb;
@@ -43,6 +48,7 @@ public class FPController : MonoBehaviour
     bool isDead = false;
     bool playingWalking = false;
     bool previouslyGrounded = true;
+    float canvasWidth, canvasHeight;
 
 
     // Inventory
@@ -71,6 +77,9 @@ public class FPController : MonoBehaviour
         health = maxHealth;
         ammoClip = maxAmmoClip;
         ammo = maxAmmo;
+
+        canvasWidth = canvas.GetComponent<RectTransform>().rect.width;
+        canvasHeight = canvas.GetComponent<RectTransform>().rect.height;
 
         RefreshHealthBar();
         RefreshBulletsInGun();
@@ -113,7 +122,7 @@ public class FPController : MonoBehaviour
             aim.SetActive(false);
 
         // Fire 
-        if (Input.GetKeyDown(KeyCode.Mouse0) && anim.GetBool("Weapon") && GameStats.canShoot)
+        if (Input.GetKeyDown(KeyCode.Mouse0) && anim.GetBool("Weapon") && GameStats.canShoot && !EventSystem.current.IsPointerOverGameObject())
         {
             if (ammoClip > 0)
             {
@@ -316,7 +325,7 @@ public class FPController : MonoBehaviour
         {
             LockCursor(false);
         }
-        else if (Input.GetKeyUp(KeyCode.Mouse0) && !cursorIsLocked)
+        else if (Input.GetKeyUp(KeyCode.Mouse0) && !cursorIsLocked && !EventSystem.current.IsPointerOverGameObject())
         {
             LockCursor(true);
         }
@@ -368,6 +377,8 @@ public class FPController : MonoBehaviour
             if (shotObj.tag == "Zombie")
             {
                 shotObj.GetComponent<ZombieController>().KillSelf();
+                GameObject blood = Instantiate(bloodParticles, hitInfo.point, shotObj.transform.rotation);
+                Destroy(blood, 0.5f);
             }
         }
     }
@@ -377,6 +388,10 @@ public class FPController : MonoBehaviour
     {
         health = (int)Mathf.Clamp((float)health - damageAmount, 0, maxHealth);
         RefreshHealthBar();
+
+        GameObject bloodSplatter = Instantiate(bloodSplaterPrefab, new Vector2(Random.Range(0, canvasWidth), Random.Range(0, canvasHeight)),
+                    Quaternion.Euler(0, 0, Random.Range(0, 360)), canvas.transform);
+        Destroy(bloodSplatter, 2.2f);
 
         if (health <= 0)
         {
@@ -424,4 +439,5 @@ public class FPController : MonoBehaviour
         float deg = Mathf.Clamp(Vector3.SignedAngle(transform.forward, toGoalVector, Vector3.up), -90, 90);
         compass.value = deg;
     }
+
 }
