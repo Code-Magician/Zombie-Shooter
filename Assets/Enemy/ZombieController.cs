@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
+
+// CONTROLS THE STATE MACHINE, SOUNDS AND HEALTH OF EACH ZOMBIE...
 public class ZombieController : MonoBehaviour
 {
+    // ALL THE STATES OF THE ZOMBIES...
     public enum STATE
     {
         IDLE,
@@ -13,21 +16,35 @@ public class ZombieController : MonoBehaviour
         ATTTACK,
         DEATH
     }
+    // THE STATE IN WHICH  THE ZOMBIE IS CURRENTLY IN...
     public STATE state = STATE.IDLE;
 
 
     [Header("References")]
     public Transform target;
+
+    // THE DAMAGE IT WILL DO TO PLAYER...
     [SerializeField] float damageAmount = 5f;
     [SerializeField] float walkingSpeed = 1f;
     [SerializeField] float runningSpeed = 5f;
+
+    // THE MAX DISTANCE AT WHICH ZOMBIE CAN SEE PLAYER...
     [SerializeField] float approachDistance = 20;
+
+    // THE MIN DISTANCE AT WHICH THE ZOMBIE CAN'T SEE THE PLAYER...
     [SerializeField] float forgetPlayerDistance = 30f;
+
+    // THE MAX DISTANCE AT WHICH THE PLAYER CAN START ATTACKING THE PLAYER...
     [SerializeField] float attackDistace = 2f;
     public GameObject ragDoll;
 
+    // AMOUNT OF HEATH THE RIFLE BULLET OF PLAYER WILL DO TO THIS ZOMBIE...
+    [SerializeField] int bulletDamage;
+
     [SerializeField] AudioSource AttackAudioSource;
     [SerializeField] AudioClip[] AttackClips;
+
+    // ZOMBIE ROAR SOUND AUDIOSOURCE AND THE MAX AND MIN DELAY BETWEEN EACH TIME THE SOUND PLAYS...
     [SerializeField] AudioSource zombieSoundAudioSource;
     [SerializeField] float minWait;
     [SerializeField] float maxWait;
@@ -36,6 +53,8 @@ public class ZombieController : MonoBehaviour
     Animator anim;
     NavMeshAgent agent;
     bool isAlive = true;
+    int health = 100;
+
 
 
     private void Start()
@@ -93,6 +112,7 @@ public class ZombieController : MonoBehaviour
                     ToggleAnimationTriggers();
                     anim.SetBool("Walk", true);
                 }
+
 
                 if (!GameStats.gameOver && CanSeePlayer())
                     state = STATE.CHASE;
@@ -173,6 +193,7 @@ public class ZombieController : MonoBehaviour
         }
     }
 
+    // TOGGLES ALL THE TRIGGERS OF THE ZOMBIE ANIMATOR TO FALSE...
     private void ToggleAnimationTriggers()
     {
         anim.SetBool("Walk", false);
@@ -209,18 +230,25 @@ public class ZombieController : MonoBehaviour
     }
 
 
+    // EVERY TIME THIS FUNCTION IS CALLED THE BULLETEDAMAGE AMOUNT OF HEALTH WILL BE REDUCED FROM THE ZOMBIE HEALTH
+    // AND WHEN THE HEALTH OF ZOMBIE REACHES ZERO IT WILL RUN DIE ANIMAITON OR WILL TURN TO RAGDOLL...
     public void KillSelf()
     {
-        if (CanSeePlayer())
+        health -= bulletDamage;
+
+        if (health <= 0)
         {
-            GameObject temp = Instantiate(ragDoll, transform.position, transform.rotation);
-            temp.transform.Find("Hips").GetComponent<Rigidbody>().AddForce(Camera.main.gameObject.transform.forward * 100, ForceMode.Impulse);
-            Destroy(gameObject);
-            return;
-        }
-        else
-        {
-            state = STATE.DEATH;
+            if (CanSeePlayer())
+            {
+                GameObject temp = Instantiate(ragDoll, transform.position, transform.rotation);
+                temp.transform.Find("Hips").GetComponent<Rigidbody>().AddForce(Camera.main.gameObject.transform.forward * 100, ForceMode.Impulse);
+                Destroy(gameObject);
+                return;
+            }
+            else
+            {
+                state = STATE.DEATH;
+            }
         }
     }
 

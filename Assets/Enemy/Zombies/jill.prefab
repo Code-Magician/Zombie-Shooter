@@ -4497,6 +4497,7 @@ MonoBehaviour:
   forgetPlayerDistance: 30
   attackDistace: 5
   ragDoll: {fileID: 1655390956260412783, guid: d10b3009c9dd33d468e3dd6597a9a874, type: 3}
+  bulletDamage: 50
   AttackAudioSource: {fileID: 327136183}
   AttackClips:
   - {fileID: 8300000, guid: 4ff26459407518b45aa72d5cb733f19c, type: 3}

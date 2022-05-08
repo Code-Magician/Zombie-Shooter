@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
+// IF THE PLAYER TRIGGERS THE COLLIDER ON GAMEOBJECT TO WHICH THIS SCRIPT IS ATTACHED...
+// IT WILL SPAWN COUNT NUMBER OF ZOMBIES IN THE SPHERERADIUS CIRCLE ON THE TERRAIN...
 public class Spawner : MonoBehaviour
 {
     [SerializeField] GameObject[] zombies;

@@ -5,6 +5,8 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
+
+// FPS CONTROLLER...
 public class FPController : MonoBehaviour
 {
     [Header("Properties")]
@@ -38,6 +40,9 @@ public class FPController : MonoBehaviour
     [SerializeField] Slider compass;
     [SerializeField] GameObject bloodSplaterPrefab;
     [SerializeField] GameObject canvas;
+    [SerializeField] GameObject gameOverText;
+    [SerializeField] GameObject lifePanel;
+    [SerializeField] Text lifeText;
 
 
     Rigidbody rb;
@@ -49,6 +54,7 @@ public class FPController : MonoBehaviour
     bool playingWalking = false;
     bool previouslyGrounded = true;
     float canvasWidth, canvasHeight;
+    Vector3 startPosition;
 
 
     // Inventory
@@ -58,11 +64,13 @@ public class FPController : MonoBehaviour
     int maxAmmoClip = 10;
     int health = 100;
     int maxHealth = 100;
+    int totalLifes = 3;
 
 
     private void Awake()
     {
         LockCursor(true);
+        startPosition = transform.position;
     }
 
 
@@ -92,7 +100,7 @@ public class FPController : MonoBehaviour
     {
         SetCompass();
 
-        // FPC Jump
+        // FPS JUMP...
         bool grounded = IsOnGround();
         if (Input.GetKeyDown(KeyCode.Space) && grounded)
         {
@@ -115,11 +123,13 @@ public class FPController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F))
             anim.SetBool("Weapon", !anim.GetBool("Weapon"));
 
+
         // Enable Aim
         if (anim.GetBool("Weapon"))
             aim.SetActive(true);
         else
             aim.SetActive(false);
+
 
         // Fire 
         if (Input.GetKeyDown(KeyCode.Mouse0) && anim.GetBool("Weapon") && GameStats.canShoot && !EventSystem.current.IsPointerOverGameObject())
@@ -135,6 +145,7 @@ public class FPController : MonoBehaviour
             // Debug.Log("AmmoClip: " + ammoClip);
             // Debug.Log("Ammo: " + ammo);
         }
+
 
         // Reload Gun
         if (Input.GetKeyDown(KeyCode.R) && anim.GetBool("Weapon"))
@@ -154,6 +165,7 @@ public class FPController : MonoBehaviour
             // Debug.Log("Ammo Clip: " + ammoClip);
             // Debug.Log("Ammo: " + ammo);
         }
+
 
         // Walking with Weapon
         if (x != 0 || z != 0)
@@ -267,6 +279,8 @@ public class FPController : MonoBehaviour
     {
         if (other.gameObject.tag == "Finishline")
         {
+            gameOverText.SetActive(true);
+            GameStats.reachedHome = true;
             GameoverWith("Dance");
         }
     }
@@ -361,6 +375,7 @@ public class FPController : MonoBehaviour
     }
 
 
+    // RUNS WHEN PLAYER SHOOTS THE BULLET...
     private void Shoot()
     {
         ammoClip--;
@@ -384,6 +399,7 @@ public class FPController : MonoBehaviour
     }
 
 
+    // WHEN ZOMBIE HIT THE PLAYER IT TAKES CARE OF THE HEALTH OF PLAYER AND GAME OVER TRANSITION WHEN HEALTH BECOMMES ZERO...
     public void TakeDamage(float damageAmount)
     {
         health = (int)Mathf.Clamp((float)health - damageAmount, 0, maxHealth);
@@ -391,25 +407,73 @@ public class FPController : MonoBehaviour
 
         GameObject bloodSplatter = Instantiate(bloodSplaterPrefab, new Vector2(Random.Range(0, canvasWidth), Random.Range(0, canvasHeight)),
                     Quaternion.Euler(0, 0, Random.Range(0, 360)), canvas.transform);
+        RectTransform rec = bloodSplatter.GetComponent<RectTransform>();
+        int x = Random.Range(500, 1000);
+        rec.sizeDelta = new Vector2(x, x);
         Destroy(bloodSplatter, 2.2f);
 
-        if (health <= 0)
+        if (health <= 0 && !GameStats.gameOver)
         {
-            GameoverWith("Death");
+
+            if (totalLifes <= 1)
+            {
+                gameOverText.SetActive(true);
+                GameoverWith("Death");
+                lifeText.text = "💔";
+            }
+            else
+            {
+                totalLifes--;
+                StartCoroutine(ChangeLife(10f));
+            }
         }
         // Debug.Log("Health: " + health);
     }
 
 
+    // PLAYER GOT 3LIVES....
+    //  IT CHANGES THE LIFE WHEN HEALTH OF PLAYER BECOMES ZERO...
+    private IEnumerator ChangeLife(float delay)
+    {
+        GameStats.gameOver = true;
+        fpsCamera.gameObject.SetActive(false);
+
+        Vector3 pos = new Vector3(transform.position.x, Terrain.activeTerrain.SampleHeight(transform.position), transform.position.z);
+        GameObject fullBody = Instantiate(fullBodyModel, pos, transform.rotation);
+        fullBody.GetComponent<Animator>().SetTrigger("Death");
+        fullBody.GetComponent<AudioSource>().enabled = false;
+        fullBody.GetComponent<GameOverScript>().enabled = false;
+
+        yield return new WaitForSeconds(delay);
+
+        lifePanel.SetActive(true);
+        Destroy(fullBody);
+        health = maxHealth;
+        transform.position = startPosition;
+        fpsCamera.gameObject.SetActive(true);
+
+        lifeText.text = new string('❤', totalLifes);
+        Invoke("DisableLifePanel", 2f);
+    }
+
+    private void DisableLifePanel()
+    {
+        lifePanel.SetActive(false);
+        GameStats.gameOver = false;
+    }
+
+
     private void GameoverWith(string action)
     {
+        GameStats.gameOver = true;
+        GameStats.allLivesFinished = true;
+
         Vector3 pos = new Vector3(transform.position.x, Terrain.activeTerrain.SampleHeight(transform.position), transform.position.z);
         GameObject fullBody = Instantiate(fullBodyModel, pos, transform.rotation);
         fullBody.GetComponent<Animator>().SetTrigger(action);
 
         LockCursor(false);
 
-        GameStats.gameOver = true;
 
         aim.SetActive(false);
 
@@ -420,6 +484,7 @@ public class FPController : MonoBehaviour
     private void RefreshHealthBar()
     {
         healthBar.value = health;
+        lifeText.text = new string('❤', totalLifes);
     }
 
     private void RefreshTotalBulletText()

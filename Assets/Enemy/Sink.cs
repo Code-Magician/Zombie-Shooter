@@ -4,12 +4,17 @@ using UnityEngine;
 
 public class Sink : MonoBehaviour
 {
+    // TO CHECK IF THE GAMEOBJECT IS PREFAB OR RAGDOLL...
     enum Is
     {
         Ragdoll, Prefab
     }
     [SerializeField] Is characterIs;
+
+    // THE DEPTH AT WHICH THE GAMEOBJECT WILL GET DESTROYED...
     [SerializeField] float maxSinkHeight = -2f;
+
+    // TIME BETWEEN THE DEATH OF ZOMBIE AND SINK START...
     float sinkDelay = 5f;
 
     bool isFirstInvoke = true;
@@ -37,6 +42,7 @@ public class Sink : MonoBehaviour
             return;
         }
 
+        // IF IT'S THE FIRST CALL TO THE FUNCTIONT THEN REMOVE ALL THE COLLIDERS AND THE RIGIDBODY FROM THE GAMEOBJECT AND DESTORY...
         if (isFirstInvoke)
         {
             isFirstInvoke = false;

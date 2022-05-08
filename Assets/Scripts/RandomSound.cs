@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+// PLAYS THE RANDOM BACKGROUND SFX WITH SOME RANDOM DELAY...
 public class RandomSound : MonoBehaviour
 {
     [SerializeField] AudioClip audioClip;

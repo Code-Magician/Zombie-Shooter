@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+
+// SWITCHS THE SCENE AND TAKES CARE OF THE VOLUME SLIDER IN BOTH SCENES...
 public class SceneSwitcher : MonoBehaviour
 {
     public void GoToScene(int sceneIndex)
@@ -15,6 +17,8 @@ public class SceneSwitcher : MonoBehaviour
     {
         SceneManager.LoadScene(sceneName);
     }
+
+
 
 
 

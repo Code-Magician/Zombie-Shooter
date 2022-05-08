@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-
+// A SINGLETON SCRIPT WHICH PESISTS BETWEEN THE SCENES..
 public class GameController : MonoBehaviour
 {
     public static GameController Instance;
@@ -20,7 +20,8 @@ public class GameController : MonoBehaviour
             Instance = this;
         }
         DontDestroyOnLoad(gameObject);
-    }
 
+        GameStats.gameOver = false;
+    }
 
 }
